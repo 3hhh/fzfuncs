@@ -31,7 +31,7 @@ If you consider the bash completion provided by [fzf](https://github.com/junegun
 
 ### Dependencies
 
-[GNU coreutils](https://www.gnu.org/software/coreutils/)) and of course [fzf](https://github.com/junegunn/fzf/). They are packaged by most Linux distributions.
+[GNU coreutils](https://www.gnu.org/software/coreutils/) and of course [fzf](https://github.com/junegunn/fzf/). They are packaged by most Linux distributions.
 
 Installed aliases may introduce [further dependencies](#installed aliases).
 
@@ -41,7 +41,7 @@ Installed aliases may introduce [further dependencies](#installed aliases).
 
 By default, the aliases have the same name as the original command, followed by a single `f` (for "fuzzy").
 
-Exceptions are: `lf` (`ls`), `f` (`mpc`), `e` (`$EDITOR`), `fox` (`firefox`)
+Exceptions are: `ls` --> `lf`, `mpc` --> `f`, `$EDITOR` --> `e`, `firefox` --> `fox` or `firefoxf`
 
 All names can be changed (cf. [customization](#customization)).
 
