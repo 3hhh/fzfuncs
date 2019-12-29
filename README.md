@@ -75,6 +75,11 @@ grepf queen favs.txt | shuf | tail -n1 | f
 Find all Queen songs in your list of favorite songs, pick a random one and play it (`f queen` would let you select from all of your Queen songs). Alternatively, you could [customize](#customization) the `f` command to know your favorite songs.
 
 ```
+grepf cash favs.txt | fzf | f
+```
+Find all Johnny Cash songs in your list of favorite songs, interactively select the one you want to listen to and play it (if you can memorize your favorite songs, `f cash` does the trick as well...).
+
+```
 fox git
 ```
 Visit github.com with firefox.
