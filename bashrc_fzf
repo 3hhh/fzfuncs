@@ -1,0 +1,464 @@
+#!/bin/bash
+#
+#+fzfuncs - Some [fzf](https://github.com/junegunn/fzf/) functions which might be useful for your bashrc.
+#+
+#+Copyright (C) 2019  David Hobach  GPLv3
+#+version: 0.5
+#+
+#+
+#+This program is free software: you can redistribute it and/or modify
+#+it under the terms of the GNU General Public License as published by
+#+the Free Software Foundation, either version 3 of the License, or
+#+(at your option) any later version.
+#+
+#+This program is distributed in the hope that it will be useful,
+#+but WITHOUT ANY WARRANTY; without even the implied warranty of
+#+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#+GNU General Public License for more details.
+#+
+#+You should have received a copy of the GNU General Public License
+#+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#+
+
+################### start: user config ####################
+### Please create a file named "bashrc_fzf.conf" in the same folder as
+### this one to overwrite any of the settings below.
+
+#+FZF_CMDS
+#+Map: command made available to the user as alias in bash --> (internal) function ID.
+#+Feel free to modify the commands to your liking and/or remove the ones you don't need.
+#+NOTE: Commands are _only_ made available, if their dependencies (see FZF_DEPS) are installed.
+declare -gA FZF_CMDS=(
+	["cdf"]="id:cd"
+	["lf"]="id:ls"
+	["f"]="id:mpc"
+	["e"]="id:editor"
+	["vimf"]="id:vim"
+	["infoof"]="id:infoo"
+	["chromiumf"]="id:chromium"
+	["firefoxf"]="id:firefox"
+	["fox"]="id:firefox"
+	["catf"]="id:cat"
+	["grepf"]="id:grep"
+	["geditf"]="id:gedit"
+	["libreofficef"]="id:libreoffice"
+	["locatef"]="id:locate"
+	["pcmanfmf"]="id:pcmanfm"
+	["evincef"]="id:evince"
+	["shuff"]="id:shuf"
+	["headf"]="id:head"
+	["tailf"]="id:tail"
+	["vlcf"]="id:vlc"
+	["killf"]="id:kill"
+	["renicef"]="id:renice"
+	)
+
+#+FZF_FAVS
+#+Map: (internal) function ID --> array of favorites to check.
+#+Most users won't have to change anything here, but will more likely want to set the arrays to their favorite directories/files/URLs.
+declare -gA FZF_FAVS=(
+	["id:cd"]="FZF_FAVS_DIRS"
+	["id:ls"]="FZF_FAVS_DIRS"
+	["id:mpc"]=""
+	["id:editor"]="FZF_FAVS_FILES"
+	["id:vim"]="FZF_FAVS_FILES"
+	["id:infoo"]="FZF_FAVS_FILES"
+	["id:chromium"]="FZF_FAVS_URLS"
+	["id:firefox"]="FZF_FAVS_URLS"
+	["id:cat"]="FZF_FAVS_FILES"
+	["id:grep"]="FZF_FAVS_FILES"
+	["id:gedit"]="FZF_FAVS_FILES"
+	["id:libreoffice"]="FZF_FAVS_FILES"
+	["id:locate"]=""
+	["id:pcmanfm"]=""
+	["id:evince"]="FZF_FAVS_FILES"
+	["id:shuf"]="FZF_FAVS_FILES"
+	["id:head"]="FZF_FAVS_FILES"
+	["id:tail"]="FZF_FAVS_FILES"
+	["id:vlc"]="FZF_FAVS_FILES"
+	["id:kill"]=""
+	["id:renice"]=""
+	)
+
+#+FZF_FAVS_DIRS
+#+Map of favorite dirs as specified by the user. If a fuzzy match can be achieved on any of the keys, the value will have priority over regular matches.
+declare -gA FZF_FAVS_DIRS=(
+	)
+
+#+FZF_FAVS_FILES
+#+Map of favorite files as specified by the user. If a fuzzy match can be achieved on any of the keys, the value will have priority over regular matches.
+declare -gA FZF_FAVS_FILES=(
+	["hosts"]="/etc/hosts"
+	["resolv"]="/etc/resolv.conf"
+	["vimrc"]="/etc/vim/vimrc"
+	)
+
+#+FZF_FAVS_URLS
+#+Map of favorite URLs as specified by the user. Most URL matching commands use this as only source of data.
+declare -gA FZF_FAVS_URLS=(
+	["github"]="https://github.com/"
+	["wikipedia"]="https://wikipedia.org/"
+	)
+
+#+FZF_BASE_MAIN
+#+The fzf command to execute to resolve fuzzy arguments, if the Favorites did not apply.
+FZF_BASE_MAIN='fzf -e -1 -0 --no-multi --no-mouse'
+
+#+FZF_BASE_FAVS
+#+The fzf command to execute to resolve fuzzy arguments with the Favorites.
+FZF_BASE_FAVS="$FZF_BASE_MAIN"
+
+#+FZF_FIND
+#+Command to employ to find directories and files on your file system.
+#+By default only searches inside /home/ for better performance and usually better results.
+FZF_FIND="locate -0ir '^/home/'"
+#FZF_FIND="locate -0i '*'"
+
+#+FZF_PROC
+#+Command to employ to find processes on your system.
+FZF_PROC='ps aux | sed 1,1d | grep -v "fzf "'
+
+#+FZF_PROC_PID
+#+Command to extract a single pid from a FZF_PROC line.
+FZF_PROC_PID="sed -rn 's/^[^0-9]+[ ]+([0-9]+)[ ]+.*/\1/p'"
+
+################### end: user config ####################
+
+#fzf_error [message]
+function fzf_error {
+#NOTE: we _never_ exit ourselves
+echo "bashrc_fzf: $1" >&2
+}
+
+#where this script resides (hopefully)
+FZF_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+
+#path to the configuration files (optional)
+#the user-specific configuration beats the global one
+FZF_CONF_USER="$HOME/.bashrc_fzf"
+FZF_CONF_GLOBAL="$FZF_DIR/bashrc_fzf.conf"
+
+#escaped variants
+FZF_FIND_ESC=
+printf -v FZF_FIND_ESC '%q' "$FZF_FIND"
+FZF_PROC_ESC=
+printf -v FZF_PROC_ESC '%q' "$FZF_PROC"
+FZF_PROC_PID_ESC=
+printf -v FZF_PROC_PID_ESC '%q' "$FZF_PROC_PID"
+
+#map: function ID --> alias implementation code
+declare -gA FZF_IMPL=(
+	["id:cd"]="fzf_fuzzify id:cd fzf_cd $FZF_FIND_ESC '' 0 0"
+	["id:ls"]="fzf_fuzzify id:ls 'ls -lah' $FZF_FIND_ESC '' 0 0"
+	["id:mpc"]="fzf_fuzzify id:mpc 'mpc play' 'mpc -f \"(%position%) %file%\" playlist' '"'sed -rn "s/^\\(([0-9]+)\\).*\$/\\1/p"'"' 1 0"
+	["id:editor"]="fzf_fuzzify id:editor ${EDITOR:-vim} $FZF_FIND_ESC '' 0 0"
+	["id:vim"]="fzf_fuzzify id:vim vim $FZF_FIND_ESC '' 0 0"
+	["id:infoo"]="fzf_fuzzify id:infoo infoo $(printf '%q' "$FZF_FIND | grep -Ezi \"\.xinfo$\"") '' 0 1"
+	["id:chromium"]="fzf_fuzzify id:chromium chromium ':' '' 0 0"
+	["id:firefox"]="fzf_fuzzify id:firefox firefox ':' '' 0 0"
+	["id:cat"]="fzf_fuzzify id:cat cat $FZF_FIND_ESC '' 0 0"
+	["id:grep"]="fzf_fuzzify id:grep 'grep -i' $FZF_FIND_ESC '' 0 1"
+	["id:gedit"]="fzf_fuzzify id:gedit gedit $FZF_FIND_ESC '' 0 0"
+	["id:libreoffice"]="fzf_fuzzify id:libreoffice libreoffice $(printf '%q' "$FZF_FIND | grep -Ezi \"\.(odt|ods|odp|odb|odg|fods)$\"") '' 0 0"
+	["id:locate"]="fzf_fuzzify id:locate 'echo -E' $FZF_FIND_ESC '' 0 0"
+	["id:pcmanfm"]="fzf_fuzzify id:pcmanfm pcmanfm $FZF_FIND_ESC '' 0 0"
+	["id:evince"]="fzf_fuzzify id:evince evince $(printf '%q' "$FZF_FIND | grep -Ezi \"\.pdf$\"") '' 0 0"
+	["id:shuf"]="fzf_fuzzify id:shuf shuf $FZF_FIND_ESC '' 0 0"
+	["id:head"]="fzf_fuzzify id:head head $FZF_FIND_ESC '' 0 0"
+	["id:tail"]="fzf_fuzzify id:tail tail $FZF_FIND_ESC '' 0 0"
+	["id:vlc"]="fzf_fuzzify id:vlc vlc $(printf '%q' "$FZF_FIND | grep -Ezi \"\.(avi|wmv|mkv|mp4|mpg|mov)$\"") '' 0 0"
+	["id:kill"]="fzf_fuzzify id:kill kill $FZF_PROC_ESC $FZF_PROC_PID_ESC 1 0"
+	["id:renice"]="fzf_fuzzify id:renice renice $FZF_PROC_ESC $FZF_PROC_PID_ESC 1 1"
+)
+
+#map: function ID --> newline-separated list of dependencies in PATH (the ones required by FZF_IMPL for that ID)
+declare -gA FZF_DEPS=(
+	["id:cd"]="dirname"$'\n'"locate"
+	["id:ls"]="ls"$'\n'"locate"
+	["id:mpc"]="mpc"$'\n'"sed"
+	["id:editor"]="${EDITOR:-vim}"$'\n'"locate"
+	["id:vim"]="vim"$'\n'"locate"
+	["id:infoo"]="infoo"$'\n'"locate"$'\n'"grep"
+	["id:chromium"]="chromium"
+	["id:firefox"]="firefox"
+	["id:cat"]="cat"$'\n'"locate"
+	["id:grep"]="grep"$'\n'"locate"
+	["id:gedit"]="gedit"$'\n'"locate"
+	["id:libreoffice"]="libreoffice"$'\n'"locate"$'\n'"grep"
+	["id:locate"]="locate"
+	["id:pcmanfm"]="pcmanfm"$'\n'"locate"
+	["id:evince"]="evince"$'\n'"locate"$'\n'"grep"
+	["id:shuf"]="shuf"$'\n'"locate"
+	["id:head"]="head"$'\n'"locate"
+	["id:tail"]="tail"$'\n'"locate"
+	["id:vlc"]="vlc"$'\n'"locate"$'\n'"grep"
+	["id:kill"]="kill"$'\n'"ps"$'\n'"grep"$'\n'"sed"
+	["id:renice"]="renice"$'\n'"ps"$'\n'"grep"$'\n'"sed"
+	)
+
+#map: favorites array name --> NUL-terminated list of favorites (no array)
+#populated during initialization
+declare -gA FZF_FAVS_RESOLVED=()
+
+#fzf_checkDep [binary]
+function fzf_checkDep {
+local bin="$1"
+command -v "$bin" &> /dev/null || { fzf_error "$bin is not installed." ; return 1 ; }
+}
+
+#fzf_checkFuncDep [id]
+function fzf_checkFuncDep {
+local id="$1"
+local deps="${FZF_DEPS["$id"]}"
+
+local dep=
+while IFS= read -r dep ; do
+	if [ -n "$dep" ] ; then
+		command -v "$dep" &> /dev/null || return 1
+	fi
+done <<< "$deps"
+
+return 0
+}
+
+#fzf_initFavorites
+#Initialize the Favorites.
+#returns: Sets a nonzero exit code, if it fails.
+function fzf_initFavorites {
+local id=
+local decl=
+local fav=
+
+#init FZF_FAVS_RESOLVED
+for id in "${!FZF_FAVS[@]}" ; do
+	local arr="${FZF_FAVS["$id"]}"
+	[ -z "$arr" ] && continue
+
+	#check whether we already did it before
+	[ -n "${FZF_FAVS_RESOLVED["$arr"]}" ] && continue
+
+	#make sure the map/array exists
+	decl="$(declare -p "$arr" 2> /dev/null)"
+	[[ "$decl" == "declare -A"* ]] || { fzf_error "Invalid map: $decl" ; return 1 ; }
+
+	#init
+	declare -n map="$arr"
+	for fav in "${!map[@]}" ; do
+		#NOTE: bash cannot store NUL characters, i.e. we cannot use it as separator in the Favorites
+		FZF_FAVS_RESOLVED["$arr"]="${FZF_FAVS_RESOLVED["$arr"]}$fav"$'\n'
+	done
+
+	#remove trailing \n
+	FZF_FAVS_RESOLVED["$arr"]="${FZF_FAVS_RESOLVED["$arr"]%?}"
+done
+return 0
+}
+
+#fzf_main [arg 1] ... [arg n]
+#Executed upon the source or execution of this file.
+function fzf_main {
+#some dependency checks
+fzf_checkDep "dirname" || return
+fzf_checkDep "readlink" || return
+fzf_checkDep "fzf" || return
+
+#source the user config, if it's available
+if [ -f "$FZF_CONF_USER" ] ; then
+	source "$FZF_CONF_USER" || { fzf_error "Failed to source the config $FZF_CONF_USER." ; return 1 ; }
+elif [ -f "$FZF_CONF_GLOBAL" ] ; then
+	source "$FZF_CONF_GLOBAL" || { fzf_error "Failed to source the config $FZF_CONF_GLOBAL." ; return 1 ; }
+fi
+
+fzf_initFavorites || { fzf_error "Failed to init the Favorites." ; return 1 ; }
+
+#setup
+local cmd=
+local ret=0
+for cmd in "${!FZF_CMDS[@]}" ; do
+	local id="${FZF_CMDS["$cmd"]}"
+	local impl="${FZF_IMPL["$id"]}"
+	if [ -n "$impl" ] && fzf_checkFuncDep "$id" ; then
+		alias "$cmd"="$impl" || ret=$(( $ret +1 ))
+	fi
+done
+
+return $ret
+}
+
+#fzf_cd [arg 1] ... [arg n]
+#Variant of cd that also accepts (existing and nonexisting) files and simply switches to the parent directory, if a file is given.
+function fzf_cd {
+#parse arguments
+local literally=1
+local args=("$@")
+local i=0
+local ind=-1
+while [ $# -gt 0 ] ; do
+	#special case: treat all following arguments literally
+	if [[ "$1" == "--" ]] ; then
+		literally=0
+	else
+		if [[ "$1" != "-"* ]] || [ $literally -eq 0 ] ; then
+			#non-switch argument
+			ind=$i
+		fi
+	fi
+
+	i=$(( $i+1 ))
+	shift
+done
+#ind now holds the last non-switch argument index
+
+if [ $ind -ge 0 ] ; then
+	local last="${args[$ind]}"
+	if [ -f "$last" ] || [ ! -e "$last" ] ; then
+		args[$ind]="$(dirname -- "$last")" || return 2
+	fi
+fi
+
+#re-define the arguments
+set -- "${args[@]}"
+cd "$@"
+}
+
+#fzf_resolve [string] [fuzzy source command] [fuzzy base command] [null termination]
+#"Defuzz"/Resolve the given string.
+#returns: The resolved [string]. Sets a nonzero return code, if resolving was not possible.
+function fzf_resolve {
+local str="$1"
+local fsource="$2"
+local fbase="$3"
+local nullTerm="$4"
+
+#generate command to execute
+local cmd=""
+local addParams=""
+[ $nullTerm -eq 0 ] && addParams="$addParams --read0"
+[ -n "$str" ] && printf -v addParams '%s -q %q' "$addParams" "$str"
+printf -v cmd '%s | %s %s' "$fsource" "$fbase" "$addParams"
+
+eval "$cmd"
+}
+
+#fzf_fuzzify [function id] [original command] [fuzzy source command] [postproc command] [null termination] [combine] [arg 1] ... [arg n]
+#Implements a fuzzy version of the [original command].
+#The following strategy is used for user-supplied (non-switch) arguments:
+# - If no non-switch argument is passed, stdin will be read and is assumed to provide the fuzzy input unless stdin is opened on a terminal.
+#   In the latter case, a single argument will be generated via fzf and the [fuzzy source command] and passed to the [original command].
+#   The Favorites are ignored.
+# - If one or multiple non-switch arguments are passed: The last non-switch argument is checked against the Favorites with fzf.
+#   If no match is found, the [fuzzy source command] and fzf are invoked to generate a non-fuzzy version of the argument and pass that
+#   to the [original command].
+# - If fzf is unable to resolve the fuzzy argument, the original argument is passed to the [original command].
+# - Only arguments _not_ starting with a "-" or following a "--" are considered to be non-switch arguments.
+#[function id]: The (internal) function ID.
+#[original command]: The command that was originally meant to be executed by the user in a non-fuzzy way.
+#[fuzzy source command]: Command to provide the data necessary to fuzzify the [original command].
+#[postproc command]: Command to post-process a resolved argument (default: none). The resolved argument is piped to that command.
+#                    This is useful, if certain syntax conversions need to take place. Alternatively one may implement his own command
+#                    as bash function (see e.g. fzf_cd) and proceed from there.
+#[null termination]: If set to 0, lines coming from [fuzzy source command] are assumed to be separated by null characters instead of
+#                    newlines (default: 0).
+#[combine]: If set to 0, combine all non-switch arguments to a single "last" argument (default: 1). Handy for lazy users who don't want
+#           to separate arguments.
+#[arg i]: Arguments passed to the [original command] by the user.
+#returns: Whatever the original command returns.
+function fzf_fuzzify {
+local fid="$1"
+local ocmd="$2"
+local fsource="$3"
+local postproc="$4"
+local nullTerm="${5:-0}"
+local combine="${6:-1}"
+shift 6
+
+#parse arguments
+local literally=1
+local sargs=()
+local margs=()
+while [ $# -gt 0 ] ; do
+	#special case: treat all following arguments literally
+	if [[ "$1" == "--" ]] ; then
+		literally=0
+		sargs+=("$1")
+	else
+		if [[ "$1" != "-"* ]] || [ $literally -eq 0 ] ; then
+			#non-switch / main argument
+			margs+=("$1")
+		else
+			sargs+=("$1")
+		fi
+	fi
+	shift
+done
+
+#try stdin, if necessary (no resolvable argument & no tty)
+local last=""
+local checkFavs=0
+if [ ${#margs[@]} -le 0 ] && [ ! -t 0 ] ; then
+	#read stdin until the end
+	local line=
+	while IFS= read -r line ; do
+		last="${last}${line}"$'\n'
+	done
+	last="${last%?}"
+	checkFavs=1
+else
+	[ $combine -eq 0 ] && last="${margs[@]}" || last="${margs[-1]}"
+fi
+
+#check favorites, if necessary
+local resolved=1
+if [ $checkFavs -eq 0 ] ; then
+	local favArr="${FZF_FAVS["$fid"]}"
+	if [ -n "$favArr" ] ; then
+		local favs="${FZF_FAVS_RESOLVED["$favArr"]}"
+		if [ -n "$favs" ] ; then
+			local cmd=
+			printf -v cmd 'echo -n %q' "$favs"
+			local tmp=
+			if tmp="$(fzf_resolve "$last" "$cmd" "$FZF_BASE_FAVS" 1)" ; then
+				#NOTE: we check with the key, but resolve with the value
+				declare -n map="$favArr"
+				last="${map["$tmp"]}"
+				resolved=0
+			fi
+		fi
+	fi
+fi
+
+#check non-favorites, if necessary
+local tmp=
+if [ $resolved -ne 0 ] ; then
+	if tmp="$(fzf_resolve "$last" "$fsource" "$FZF_BASE_MAIN" "$nullTerm")" ; then
+		last="$tmp"
+		resolved=0
+	fi
+fi
+
+if [ $resolved -eq 0 ] ; then
+	#post-proc, if necessary
+	if [ -n "$postproc" ] ; then
+		tmp="$(eval "$postproc" <<< "$last")" && last="$tmp"
+	fi
+
+	#set arguments
+	if [ ${#margs[@]} -gt 0 ] ; then
+		if [ $combine -eq 0 ] ; then
+			unset 'margs[@]'
+			local margs=("$last")
+		else
+			margs[-1]="$last"
+		fi
+	else
+		#the user supplied no argument --> add one, if a meaningful result could be achieved
+		[ -n "$last" ] && margs+=("$last")
+	fi
+fi
+
+#execute
+$ocmd "${sargs[@]}" "${margs[@]}"
+}
+
+#main
+fzf_main "$@"
