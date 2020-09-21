@@ -2,7 +2,7 @@
 #
 #+fzfuncs - Some [fzf](https://github.com/junegunn/fzf/) functions which might be useful for your bashrc.
 #+
-#+Copyright (C) 2019  David Hobach  GPLv3
+#+Copyright (C) 2020  David Hobach  GPLv3
 #+version: 0.5
 #+
 #+
@@ -34,6 +34,7 @@ declare -gA FZF_CMDS=(
 	["f"]="id:mpc"
 	["e"]="id:editor"
 	["vimf"]="id:vim"
+	["lessf"]="id:less"
 	["infoof"]="id:infoo"
 	["chromiumf"]="id:chromium"
 	["firefoxf"]="id:firefox"
@@ -62,6 +63,7 @@ declare -gA FZF_FAVS=(
 	["id:mpc"]=""
 	["id:editor"]="FZF_FAVS_FILES"
 	["id:vim"]="FZF_FAVS_FILES"
+	["id:less"]="FZF_FAVS_FILES"
 	["id:infoo"]="FZF_FAVS_FILES"
 	["id:chromium"]="FZF_FAVS_URLS"
 	["id:firefox"]="FZF_FAVS_URLS"
@@ -153,6 +155,7 @@ declare -gA FZF_IMPL=(
 	["id:mpc"]="fzf_fuzzify id:mpc 'mpc play' 'mpc -f \"(%position%) %file%\" playlist' '"'sed -rn "s/^\\(([0-9]+)\\).*\$/\\1/p"'"' 1 0"
 	["id:editor"]="fzf_fuzzify id:editor ${EDITOR:-vim} $FZF_FIND_ESC '' 0 0"
 	["id:vim"]="fzf_fuzzify id:vim vim $FZF_FIND_ESC '' 0 0"
+	["id:less"]="fzf_fuzzify id:less less $FZF_FIND_ESC '' 0 0"
 	["id:infoo"]="fzf_fuzzify id:infoo infoo $(printf '%q' "$FZF_FIND | grep -Ezi \"\.xinfo$\"") '' 0 1"
 	["id:chromium"]="fzf_fuzzify id:chromium chromium ':' '' 0 0"
 	["id:firefox"]="fzf_fuzzify id:firefox firefox ':' '' 0 0"
@@ -178,6 +181,7 @@ declare -gA FZF_DEPS=(
 	["id:mpc"]="mpc"$'\n'"sed"
 	["id:editor"]="${EDITOR:-vim}"$'\n'"locate"
 	["id:vim"]="vim"$'\n'"locate"
+	["id:less"]="less"$'\n'"locate"
 	["id:infoo"]="infoo"$'\n'"locate"$'\n'"grep"
 	["id:chromium"]="chromium"
 	["id:firefox"]="firefox"
