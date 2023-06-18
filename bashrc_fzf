@@ -98,8 +98,8 @@ declare -gA FZF_FAVS_FILES=(
 #+FZF_FAVS_URLS
 #+Map of favorite URLs as specified by the user. Most URL matching commands use this as only source of data.
 declare -gA FZF_FAVS_URLS=(
-	["github"]="https://github.com/"
-	["wikipedia"]="https://wikipedia.org/"
+	["github.com"]="https://github.com/"
+	["wikipedia.org"]="https://wikipedia.org/"
 	)
 
 #+FZF_BASE_MAIN
