@@ -2,7 +2,7 @@
 #
 #+fzfuncs - Some [fzf](https://github.com/junegunn/fzf/) functions which might be useful for your bashrc.
 #+
-#+Copyright (C) 2020  David Hobach  GPLv3
+#+Copyright (C) 2024  David Hobach  GPLv3
 #+version: 0.5
 #+
 #+
@@ -216,7 +216,7 @@ local id="$1"
 local deps="${FZF_DEPS["$id"]}"
 
 local dep=
-while IFS= read -r dep ; do
+while IFS= read -r dep || [ -n "$dep" ] ; do
 	if [ -n "$dep" ] ; then
 		command -v "$dep" &> /dev/null || return 1
 	fi
@@ -402,7 +402,7 @@ local checkFavs=0
 if [ ${#margs[@]} -le 0 ] && [ ! -t 0 ] ; then
 	#read stdin until the end
 	local line=
-	while IFS= read -r line ; do
+	while IFS= read -r line || [ -n "$line" ] ; do
 		last="${last}${line}"$'\n'
 	done
 	last="${last%?}"
